@@ -1,6 +1,6 @@
 # Yllehs
 
-Yllehs is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual devices states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
+Yllehs is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual device states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
 
 ---
 
@@ -11,7 +11,7 @@ Many third-party home automation systems, IoT controllers, and integration clien
 Yllehs bridges this gap by acting as a lightweight, software-defined Shelly fleet:
 - Exposes **stateful variables** (switch outputs, input triggers, power metering, device statuses) backed by realistic Shelly hardware models.
 - Executes **native Shelly JavaScript scripts** inside a sandboxed QuickJS runtime to handle logic, timers, and event-driven automation.
-- Allows external clients compatible with the Shelly API to interact with external systems through virtual Shelly devices..
+- Allows external clients and test harnesses limited to Shelly API interfaces to interact with virtual devices without physical hardware.
 
 ---
 
@@ -73,6 +73,66 @@ devices:
 
 ---
 
+## Example `curl` Payloads
+
+### Gen 2 / Gen 3 (Shelly Plus & Gen 3 RPC)
+
+**1. Query Device Info:**
+```bash
+curl -s http://localhost:8080/shelly
+```
+
+**2. Query Status via RPC (POST):**
+```bash
+curl -s -X POST http://localhost:8080/rpc   -H "Content-Type: application/json"   -d '{"id": 1, "src": "client", "method": "Shelly.GetStatus"}'
+```
+
+**3. Turn Switch ON via RPC (POST):**
+```bash
+curl -s -X POST http://localhost:8080/rpc   -H "Content-Type: application/json"   -d '{"id": 2, "src": "client", "method": "Switch.Set", "params": {"id": 0, "on": true}}'
+```
+
+**4. Toggle Switch via HTTP GET RPC:**
+```bash
+curl -s "http://localhost:8080/rpc/Switch.Toggle?id=0"
+```
+
+**5. Query Switch Status (GET):**
+```bash
+curl -s "http://localhost:8080/rpc/Switch.GetStatus?id=0"
+```
+
+---
+
+### Gen 1 (Shelly 1 / 1PM / 2.5 REST)
+
+**1. Query Status:**
+```bash
+curl -s http://localhost:8083/status
+```
+
+**2. Turn Relay ON:**
+```bash
+curl -s "http://localhost:8083/relay/0?turn=on"
+```
+
+**3. Toggle Relay:**
+```bash
+curl -s "http://localhost:8083/relay/0?turn=toggle"
+```
+
+---
+
+### Simulation / Test Control Endpoint
+
+Simulate physical hardware button presses or input state transitions (triggers registered JS event handlers):
+
+```bash
+curl -s -X POST http://localhost:8080/_yllehs/simulate/input/0   -H "Content-Type: application/json"   -d '{"event": "btn_down", "state": true}'
+```
+
+---
+
 ## Quickstart
 
 ### Local (with `uv`)
@@ -93,9 +153,3 @@ uv run pytest
 ```bash
 docker compose up --build
 ```
-
-
-## Disclaimer
-
-The code in this repo is an independent, community-developed project and is not affiliated with, endorsed by, sponsored by, or otherwise associated with Shelly Group. “Shelly” and all related trademarks and/or registered trademarks are the property of their respective owners.
-
