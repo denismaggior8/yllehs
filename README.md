@@ -1,6 +1,17 @@
 # Yllehs
 
-Software emulator for real Shelly IoT devices with faithful hardware topology, generation-accurate API interfaces (Gen 1, Gen 2, Gen 3), and embedded sandboxed JavaScript scripting runtime (QuickJS).
+Yllehs is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual device states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
+
+---
+
+## Purpose
+
+Many third-party home automation systems, IoT controllers, and integration clients can only execute custom logic or fetch external state by talking directly to real Shelly hardware interfaces. 
+
+Yllehs bridges this gap by acting as a lightweight, software-defined Shelly fleet:
+- Exposes **stateful variables** (switch outputs, input triggers, power metering, device statuses) backed by realistic Shelly hardware models.
+- Executes **native Shelly JavaScript scripts** inside a sandboxed QuickJS runtime to handle logic, timers, and event-driven automation.
+- Allows external clients and test harnesses limited to Shelly API interfaces to interact with external systems bridged by virtual Shelly devices.
 
 ---
 
