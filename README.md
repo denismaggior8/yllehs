@@ -13,6 +13,31 @@ Yllehs bridges this gap by acting as a lightweight, software-defined Shelly flee
 - Executes **native Shelly JavaScript scripts** inside a sandboxed QuickJS runtime to handle logic, timers, and event-driven automation.
 - Allows external clients and test harnesses limited to Shelly API interfaces to interact with virtual devices without physical hardware.
 
+### Architecture
+
+```mermaid
+graph LR
+    subgraph ClientSystem["External Client / Automation System"]
+        Client["Shelly-Compatible Client<br/>(Home Assistant, Konnecta, SCADA, Test Harness)"]
+    end
+
+    subgraph YllehsContainer["Yllehs (Bridge & Emulator)"]
+        RPC["Shelly RPC / REST API<br/>(:8080)"]
+        State["Virtual Device State<br/>(switch:0, input:0, pm:0)"]
+        Engine["Sandboxed JS Runtime (QuickJS)<br/>(Shelly Scripts / Event Handlers)"]
+        
+        RPC <--> State
+        State <--> Engine
+    end
+
+    subgraph ThirdPartySystem["3rd-Party System / External Service"]
+        Service["REST API / Webhook / Cloud Service<br/>(Alerting, Webhook, Database)"]
+    end
+
+    Client -->|"Shelly RPC / REST calls<br/>(Switch.Set, Shelly.GetStatus)"| RPC
+    Engine -->|"Shelly.call('HTTP.POST', ...)<br/>or HTTP Webhook"| Service
+```
+
 ---
 
 ## Features
@@ -84,12 +109,16 @@ curl -s http://localhost:8080/shelly
 
 **2. Query Status via RPC (POST):**
 ```bash
-curl -s -X POST http://localhost:8080/rpc   -H "Content-Type: application/json"   -d '{"id": 1, "src": "client", "method": "Shelly.GetStatus"}'
+curl -s -X POST http://localhost:8080/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"id": 1, "src": "client", "method": "Shelly.GetStatus"}'
 ```
 
 **3. Turn Switch ON via RPC (POST):**
 ```bash
-curl -s -X POST http://localhost:8080/rpc   -H "Content-Type: application/json"   -d '{"id": 2, "src": "client", "method": "Switch.Set", "params": {"id": 0, "on": true}}'
+curl -s -X POST http://localhost:8080/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"id": 2, "src": "client", "method": "Switch.Set", "params": {"id": 0, "on": true}}'
 ```
 
 **4. Toggle Switch via HTTP GET RPC:**
@@ -128,7 +157,9 @@ curl -s "http://localhost:8083/relay/0?turn=toggle"
 Simulate physical hardware button presses or input state transitions (triggers registered JS event handlers):
 
 ```bash
-curl -s -X POST http://localhost:8080/_yllehs/simulate/input/0   -H "Content-Type: application/json"   -d '{"event": "btn_down", "state": true}'
+curl -s -X POST http://localhost:8080/_yllehs/simulate/input/0 \
+  -H "Content-Type: application/json" \
+  -d '{"event": "btn_down", "state": true}'
 ```
 
 ---
