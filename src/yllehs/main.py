@@ -37,6 +37,10 @@ async def run_server(config_path: str):
         runners.append(runner)
         print(f"Started virtual Shelly device '{name}' (model: {model}) on http://0.0.0.0:{port}", flush=True)
 
+    # Start scripts after event loop and HTTP servers are active
+    for device in devices:
+        device.start_script()
+
     try:
         while True:
             await asyncio.sleep(3600)

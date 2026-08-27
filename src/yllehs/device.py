@@ -26,14 +26,14 @@ class VirtualDevice:
         self.rpc_handler = RPCHandler(self)
         self.runtime = ScriptRuntime(self) if self.gen >= 2 else None
 
-        # Hook component notifications into runtime if Gen2+
         if self.runtime:
             for comp in self.components.values():
                 comp.add_listener(self._handle_component_notification)
 
-            if self.script_path and os.path.isfile(self.script_path):
-                with open(self.script_path, "r") as f:
-                    self.runtime.load_script(f.read())
+    def start_script(self):
+        if self.runtime and self.script_path and os.path.isfile(self.script_path):
+            with open(self.script_path, "r") as f:
+                self.runtime.load_script(f.read())
 
     def _init_components(self):
         for spec in self.profile.components:
@@ -116,9 +116,7 @@ class VirtualDevice:
         if self.runtime:
             self.runtime.stop()
             self.runtime = ScriptRuntime(self)
-            if self.script_path and os.path.isfile(self.script_path):
-                with open(self.script_path, "r") as f:
-                    self.runtime.load_script(f.read())
+            self.start_script()
         return {"restart_required": False}
 
     def stop(self):

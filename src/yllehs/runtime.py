@@ -184,8 +184,13 @@ class ScriptRuntime:
                 if not repeat:
                     break
 
-        task = asyncio.create_task(_timer_loop())
-        self._timers[handle] = task
+        try:
+            loop = asyncio.get_running_loop()
+            task = loop.create_task(_timer_loop())
+            self._timers[handle] = task
+        except RuntimeError:
+            # Fallback if called before loop starts
+            pass
         return handle
 
     def _host_timer_clear(self, handle: int):
@@ -206,20 +211,27 @@ class ScriptRuntime:
                 code = getattr(e, "code", -1)
                 msg = getattr(e, "message", str(e))
                 if cb_id:
-                    self.ctx.eval(f"__invoke_callback({json.dumps(cb_id)}, null, {code}, {json.dumps(msg)});");
+                    self.ctx.eval(f"__invoke_callback({json.dumps(cb_id)}, null, {code}, {json.dumps(msg)});")
 
-        asyncio.create_task(_async_call())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_async_call())
+        except RuntimeError:
+            pass
 
     def on_event(self, data: Dict[str, Any]):
         evt_json = json.dumps(data)
-        self.ctx.eval(f"__dispatch_event({json.dumps(evt_json)});");
+        self.ctx.eval(f"__dispatch_event({json.dumps(evt_json)});")
 
     def on_status_change(self, data: Dict[str, Any]):
         st_json = json.dumps(data)
-        self.ctx.eval(f"__dispatch_status({json.dumps(st_json)});");
+        self.ctx.eval(f"__dispatch_status({json.dumps(st_json)});")
 
     def load_script(self, code: str):
-        return self.ctx.eval(code)
+        try:
+            return self.ctx.eval(code)
+        except Exception as e:
+            print(f"[{self.device.name}] [SCRIPT ERROR] {e}", flush=True)
 
     def stop(self):
         for task in self._timers.values():
