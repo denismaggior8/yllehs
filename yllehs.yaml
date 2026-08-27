@@ -3,6 +3,7 @@ devices:
     model: plus-1
     firmware: "1.4.0"
     port: 8080
+    script: ./scripts/alarm.js
 
   - name: lights
     model: plus-1pm
@@ -13,3 +14,7 @@ devices:
     model: plus-2pm
     firmware: "1.4.0"
     port: 8082
+
+  - name: old-relay
+    model: shelly1
+    port: 8083

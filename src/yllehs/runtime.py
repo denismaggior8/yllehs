@@ -151,7 +151,7 @@ class ScriptRuntime:
         self.ctx.eval(bootstrap_js)
 
     def _host_print(self, msg: str):
-        print(f"[{self.device.name}] {msg}")
+        print(f"[{self.device.name}] {msg}", flush=True)
 
     def _host_get_component_status(self, key: str) -> Optional[str]:
         if ":" in key:

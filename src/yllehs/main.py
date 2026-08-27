@@ -13,7 +13,7 @@ async def run_server(config_path: str):
 
     devices_cfg = config.get("devices", [])
     if not devices_cfg:
-        print("No devices configured.")
+        print("No devices configured.", flush=True)
         return
 
     runners: List[web.AppRunner] = []
@@ -23,7 +23,7 @@ async def run_server(config_path: str):
         name = d_cfg.get("name", "shelly")
         model = d_cfg.get("model", "plus-1")
         port = d_cfg.get("port", 8080)
-        firmware = d_cfg.get("firmware", "1.4.0")
+        firmware = d_cfg.get("firmware", None)
         script = d_cfg.get("script", None)
 
         device = VirtualDevice(name=name, model=model, port=port, firmware=firmware, script_path=script)
@@ -35,7 +35,7 @@ async def run_server(config_path: str):
         site = web.TCPSite(runner, "0.0.0.0", port)
         await site.start()
         runners.append(runner)
-        print(f"Started virtual Shelly device '{name}' (model: {model}) on http://0.0.0.0:{port}")
+        print(f"Started virtual Shelly device '{name}' (model: {model}) on http://0.0.0.0:{port}", flush=True)
 
     try:
         while True:
@@ -49,7 +49,7 @@ async def run_server(config_path: str):
 def main():
     cfg_path = sys.argv[1] if len(sys.argv) > 1 else "yllehs.yaml"
     if not os.path.isfile(cfg_path):
-        print(f"Config file '{cfg_path}' not found.")
+        print(f"Config file '{cfg_path}' not found.", flush=True)
         sys.exit(1)
     asyncio.run(run_server(cfg_path))
 
