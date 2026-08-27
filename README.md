@@ -71,34 +71,66 @@ graph LR
 
 ---
 
-## Configuration (`yllehs.yaml`)
+## Docker Compose Example
 
-```yaml
-devices:
-  - name: garage
-    model: plus-1
-    firmware: "1.4.0"
-    port: 8080
-    script: /scripts/alarm.js
+The repository includes a complete out-of-the-box multi-device setup with custom JavaScript event and status listeners.
 
-  - name: lights
-    model: plus-1pm
-    firmware: "1.4.0"
-    port: 8081
+### 1. Structure
 
-  - name: shutters
-    model: plus-2pm
-    firmware: "1.4.0"
-    port: 8082
+- `docker-compose.yml`: Spawns the Yllehs emulator container and maps ports `8080`–`8083`. Mounts `./scripts` into `/app/scripts` and `./yllehs.yaml` into `/app/yllehs.yaml`.
+- `yllehs.yaml`: Declares 4 virtual devices (`garage` on `:8080`, `lights` on `:8081`, `shutters` on `:8082`, `old-relay` on `:8083`).
+- `scripts/alarm.js`: JavaScript script mounted into the `garage` virtual Shelly device that monitors `switch:0` state changes and `input:0` button events.
 
-  - name: old-relay
-    model: shelly1
-    port: 8083
+### 2. Run Container
+
+```bash
+docker compose up --build
+```
+
+Container startup logs:
+```text
+yllehs-1  | Started virtual Shelly device 'garage' (model: plus-1) on http://0.0.0.0:8080
+yllehs-1  | [garage] Alarm controller script initialized on virtual Shelly!
+yllehs-1  | Started virtual Shelly device 'lights' (model: plus-1pm) on http://0.0.0.0:8081
+yllehs-1  | Started virtual Shelly device 'shutters' (model: plus-2pm) on http://0.0.0.0:8082
+yllehs-1  | Started virtual Shelly device 'old-relay' (model: shelly1) on http://0.0.0.0:8083
+```
+
+### 3. Trigger Script Actions via `curl`
+
+#### Action A: Toggle Switch on `garage` (`:8080`)
+Set `switch:0` to `true`:
+```bash
+curl -s -X POST http://localhost:8080/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"id": 1, "src": "test-client", "method": "Switch.Set", "params": {"id": 0, "on": true}}'
+```
+or via HTTP GET shortcut:
+```bash
+curl -s "http://localhost:8080/rpc/Switch.Toggle?id=0"
+```
+
+**Observed in `docker compose` logs:**
+```text
+[garage] [SCRIPT NOTIFICATION] Switch 0 changed state -> output: true (source: RPC)
+```
+
+#### Action B: Trigger Hardware Button Event on `garage` (`:8080`)
+Simulate external physical button click (`btn_down`) via test control endpoint:
+```bash
+curl -s -X POST http://localhost:8080/_yllehs/simulate/input/0 \
+  -H "Content-Type: application/json" \
+  -d '{"event": "btn_down", "state": true}'
+```
+
+**Observed in `docker compose` logs:**
+```text
+[garage] [SCRIPT NOTIFICATION] Input 0 triggered event: btn_down
 ```
 
 ---
 
-## Example `curl` Payloads
+## API Reference & Examples
 
 ### Gen 2 / Gen 3 (Shelly Plus & Gen 3 RPC)
 
@@ -152,21 +184,7 @@ curl -s "http://localhost:8083/relay/0?turn=toggle"
 
 ---
 
-### Simulation / Test Control Endpoint
-
-Simulate physical hardware button presses or input state transitions (triggers registered JS event handlers):
-
-```bash
-curl -s -X POST http://localhost:8080/_yllehs/simulate/input/0 \
-  -H "Content-Type: application/json" \
-  -d '{"event": "btn_down", "state": true}'
-```
-
----
-
-## Quickstart
-
-### Local (with `uv`)
+## Quickstart (Local without Docker)
 
 ```bash
 # Install dependencies
@@ -177,10 +195,4 @@ uv run python -m yllehs.main yllehs.yaml
 
 # Run test suite
 uv run pytest
-```
-
-### Docker
-
-```bash
-docker compose up --build
 ```
