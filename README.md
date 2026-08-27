@@ -11,7 +11,7 @@ Many third-party home automation systems, IoT controllers, and integration clien
 Yllehs bridges this gap by acting as a lightweight, software-defined Shelly fleet:
 - Exposes **stateful variables** (switch outputs, input triggers, power metering, device statuses) backed by realistic Shelly hardware models.
 - Executes **native Shelly JavaScript scripts** inside a sandboxed QuickJS runtime to handle logic, timers, and event-driven automation.
-- Allows external clients and test harnesses limited to Shelly API interfaces to interact with external systems bridged by virtual Shelly devices.
+- Allows external clients compatible with the Shelly API to interact with external systems through virtual Shelly devices..
 
 ---
 
@@ -93,3 +93,9 @@ uv run pytest
 ```bash
 docker compose up --build
 ```
+
+
+## Disclaimer
+
+The code in this repo is an independent, community-developed project and is not affiliated with, endorsed by, sponsored by, or otherwise associated with Shelly Group. “Shelly” and all related trademarks and/or registered trademarks are the property of their respective owners.
+
