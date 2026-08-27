@@ -1,0 +1,10 @@
+services:
+  yllehs:
+    build: .
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./yllehs.yaml:/app/yllehs.yaml:ro

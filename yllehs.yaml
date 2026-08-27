@@ -1,0 +1,15 @@
+devices:
+  - name: garage
+    model: plus-1
+    firmware: "1.4.0"
+    port: 8080
+
+  - name: lights
+    model: plus-1pm
+    firmware: "1.4.0"
+    port: 8081
+
+  - name: shutters
+    model: plus-2pm
+    firmware: "1.4.0"
+    port: 8082
