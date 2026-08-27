@@ -11,7 +11,7 @@ Many third-party home automation systems, IoT controllers, and integration clien
 Yllehs bridges this gap by acting as a lightweight, software-defined Shelly fleet:
 - Exposes **stateful variables** (switch outputs, input triggers, power metering, device statuses) backed by realistic Shelly hardware models.
 - Executes **native Shelly JavaScript scripts** inside a sandboxed QuickJS runtime to handle logic, timers, and event-driven automation.
-- Allows external clients and test harnesses limited to Shelly API interfaces to interact with other 3rd party systems using virtual Shelly devices as a bridge.
+- Allows external clients and test harnesses limited to Shelly API interfaces to interact with other 3rd party systems using Yllehs devices as bridges/adapters.
 
 ### Architecture
 
