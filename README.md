@@ -1,6 +1,6 @@
 # Yllehs
 
-Yllehs is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual device states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
+Yllehs is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual devices states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
 
 ---
 
