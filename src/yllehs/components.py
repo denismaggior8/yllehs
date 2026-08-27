@@ -29,6 +29,27 @@ class Component:
         return {"restart_required": False}
 
 
+class SysComponent(Component):
+    def __init__(self, comp_id: int, config: Dict[str, Any], initial_status: Dict[str, Any]):
+        super().__init__("sys", comp_id, config, initial_status)
+        self.start_time = time.time()
+        if "ram_size" not in self.status:
+            self.status["ram_size"] = 236816
+        if "ram_free" not in self.status:
+            self.status["ram_free"] = 142856
+        if "fs_size" not in self.status:
+            self.status["fs_size"] = 458752
+        if "fs_free" not in self.status:
+            self.status["fs_free"] = 163840
+
+    def get_status(self) -> Dict[str, Any]:
+        st = dict(self.status)
+        st["uptime"] = int(time.time() - self.start_time)
+        st["time"] = time.strftime("%H:%M", time.localtime())
+        st["unixtime"] = int(time.time())
+        return st
+
+
 class SwitchComponent(Component):
     def __init__(self, comp_id: int, config: Dict[str, Any], initial_status: Dict[str, Any]):
         super().__init__("switch", comp_id, config, initial_status)
@@ -98,7 +119,9 @@ class InputComponent(Component):
 
 
 def create_component(spec) -> Component:
-    if spec.type == "switch":
+    if spec.type == "sys":
+        return SysComponent(spec.id, spec.config, spec.initial_status)
+    elif spec.type == "switch":
         return SwitchComponent(spec.id, spec.config, spec.initial_status)
     elif spec.type == "relay":
         return RelayComponent(spec.id, spec.config, spec.initial_status)

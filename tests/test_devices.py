@@ -104,3 +104,17 @@ async def test_javascript_timer():
     await asyncio.sleep(0.06)
     assert dev.runtime.ctx.eval("count") == 1
     dev.stop()
+
+@pytest.mark.asyncio
+async def test_shelly_get_component_status_sys_uptime():
+    dev = VirtualDevice(name="test-sys", model="plus-1", port=8080)
+    
+    script = """
+    var uptime = Shelly.getComponentStatus("sys").uptime;
+    var uptimeWithId = Shelly.getComponentStatus("sys", 0).uptime;
+    """
+    dev.runtime.load_script(script)
+    
+    assert dev.runtime.ctx.eval("typeof uptime") == "number"
+    assert dev.runtime.ctx.eval("uptime >= 0") is True
+    assert dev.runtime.ctx.eval("uptimeWithId >= 0") is True
