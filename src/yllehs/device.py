@@ -23,6 +23,13 @@ class VirtualDevice:
         self.components: Dict[str, Component] = {}
         self._init_components()
         
+        # Ensure sys:0 config reflects configured device name
+        if "sys:0" in self.components:
+            sys_comp = self.components["sys:0"]
+            dev_cfg = sys_comp.config.get("device", {})
+            dev_cfg["name"] = self.name
+            sys_comp.config["device"] = dev_cfg
+        
         self.rpc_handler = RPCHandler(self)
         self.runtime = ScriptRuntime(self) if self.gen >= 2 else None
 
@@ -56,6 +63,7 @@ class VirtualDevice:
             return {
                 "type": self.profile.type_name,
                 "mac": mac,
+                "name": self.name,
                 "auth": False,
                 "fw": self.firmware,
                 "discoverable": True,
@@ -64,7 +72,8 @@ class VirtualDevice:
             }
         else:
             return {
-                "id": f"yllehs-{self.name}",
+                "id": f"yllehs-{self.name.lower().replace(' ', '-')}",
+                "name": self.name,
                 "mac": mac,
                 "model": self.profile.model,
                 "gen": self.profile.gen,
@@ -83,6 +92,7 @@ class VirtualDevice:
                 "inputs": [c.get_status() for c in self.components.values() if c.type == "input"],
                 "meters": [c.get_status() for c in self.components.values() if c.type == "pm"],
                 "mac": self.components.get("sys:0", Component("sys", 0, {}, {})).config.get("device", {}).get("mac", "AABBCCDDEE00"),
+                "name": self.name
             }
             return res
         else:
@@ -98,9 +108,10 @@ class VirtualDevice:
     def get_config(self) -> Dict[str, Any]:
         if self.gen == 1:
             return {
-                "device": {"type": self.profile.type_name, "mac": "AABBCCDDEE00"},
+                "device": {"type": self.profile.type_name, "mac": "AABBCCDDEE00", "name": self.name},
                 "wifi_sta": self.components.get("wifi:0", Component("wifi", 0, {}, {})).get_config(),
                 "relays": [c.get_config() for c in self.components.values() if c.type == "relay"],
+                "name": self.name
             }
         else:
             res = {

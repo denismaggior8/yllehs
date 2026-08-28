@@ -154,3 +154,20 @@ async def test_switch_set_notifies_add_event_handler():
     await asyncio.sleep(0.01)
     assert dev.runtime.ctx.eval("eventCount") == 2
     assert dev.runtime.ctx.eval("lastEvent.info.state") is False
+
+@pytest.mark.asyncio
+async def test_device_name_with_uppercase_and_spaces_in_js():
+    dev = VirtualDevice(name="LIVING ROOM ALARM", model="plus-1", port=8080)
+    
+    script = """
+    var devInfo = Shelly.getDeviceInfo();
+    var devNameFromInfo = devInfo.name;
+    
+    var sysConfig = Shelly.getComponentConfig("sys");
+    var devNameFromSys = sysConfig.device.name;
+    """
+    dev.start_script()
+    dev.runtime.load_script(script)
+    
+    assert dev.runtime.ctx.eval("devNameFromInfo") == "LIVING ROOM ALARM"
+    assert dev.runtime.ctx.eval("devNameFromSys") == "LIVING ROOM ALARM"
