@@ -118,3 +118,39 @@ async def test_shelly_get_component_status_sys_uptime():
     assert dev.runtime.ctx.eval("typeof uptime") == "number"
     assert dev.runtime.ctx.eval("uptime >= 0") is True
     assert dev.runtime.ctx.eval("uptimeWithId >= 0") is True
+
+@pytest.mark.asyncio
+async def test_switch_set_notifies_add_event_handler():
+    dev = VirtualDevice(name="test-event", model="plus-1", port=8080)
+    
+    script = """
+    var eventCount = 0;
+    var lastEvent = null;
+    Shelly.addEventHandler(function(event) {
+        eventCount += 1;
+        lastEvent = event;
+        print("Event triggered for component:", event.component);
+    });
+    """
+    dev.start_script()
+    dev.runtime.load_script(script)
+    
+    # Switch is initialized to false. Setting to true triggers event.
+    await dev.rpc_handler.execute("Switch.Set", {"id": 0, "on": True})
+    await asyncio.sleep(0.01)
+    
+    assert dev.runtime.ctx.eval("eventCount") == 1
+    assert dev.runtime.ctx.eval("lastEvent.component") == "switch:0"
+    assert dev.runtime.ctx.eval("lastEvent.event") == "toggle"
+    assert dev.runtime.ctx.eval("lastEvent.info.state") is True
+    
+    # Setting to true again (no state change) -> no additional event
+    await dev.rpc_handler.execute("Switch.Set", {"id": 0, "on": True})
+    await asyncio.sleep(0.01)
+    assert dev.runtime.ctx.eval("eventCount") == 1
+    
+    # Setting to false (state change) -> triggers second event
+    await dev.rpc_handler.execute("Switch.Set", {"id": 0, "on": False})
+    await asyncio.sleep(0.01)
+    assert dev.runtime.ctx.eval("eventCount") == 2
+    assert dev.runtime.ctx.eval("lastEvent.info.state") is False

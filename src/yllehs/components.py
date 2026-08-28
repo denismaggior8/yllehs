@@ -66,9 +66,29 @@ class SwitchComponent(Component):
             self.status["apower"] = 50.0 if on else 0.0
             self.status["current"] = 0.22 if on else 0.0
 
+        ts = time.time()
         if was_on != on:
-            self.notify("status_change", {"component": self.key, "delta": {"output": on, "source": source}, "status": self.get_status()})
-            self.notify("event", {"component": self.key, "event": "toggle", "ts": time.time(), "id": self.id})
+            self.notify("status_change", {
+                "name": "switch",
+                "id": self.id,
+                "component": self.key,
+                "delta": {"output": on, "source": source},
+                "status": self.get_status()
+            })
+            self.notify("event", {
+                "name": "switch",
+                "id": self.id,
+                "component": self.key,
+                "event": "toggle",
+                "ts": ts,
+                "info": {
+                    "component": self.key,
+                    "id": self.id,
+                    "event": "toggle",
+                    "ts": ts,
+                    "state": on
+                }
+            })
         return {"was_on": was_on}
 
     def toggle(self, source: str = "RPC") -> Dict[str, Any]:
@@ -113,8 +133,29 @@ class InputComponent(Component):
             self.status["event"] = event_name
             self.status["event_cnt"] = self.status.get("event_cnt", 0) + 1
 
-        self.notify("event", {"component": self.key, "event": event_name, "ts": time.time(), "id": self.id})
-        self.notify("status_change", {"component": self.key, "delta": {"state": self.status.get("state")}, "status": self.get_status()})
+        ts = time.time()
+        curr_state = self.status.get("state")
+        self.notify("event", {
+            "name": "input",
+            "id": self.id,
+            "component": self.key,
+            "event": event_name,
+            "ts": ts,
+            "info": {
+                "component": self.key,
+                "id": self.id,
+                "event": event_name,
+                "ts": ts,
+                "state": curr_state
+            }
+        })
+        self.notify("status_change", {
+            "name": "input",
+            "id": self.id,
+            "component": self.key,
+            "delta": {"state": curr_state},
+            "status": self.get_status()
+        })
         return self.get_status()
 
 
