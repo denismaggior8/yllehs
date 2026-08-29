@@ -1,6 +1,8 @@
 # Yllehs
 
-Yllehs (pronounced “Illes”) is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual device states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
+Yllehs is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual device states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
+
+Fully discoverable and manageable as real Shelly devices by **Home Assistant**.
 
 ---
 
@@ -11,18 +13,20 @@ Many third-party home automation systems, IoT controllers, and integration clien
 Yllehs bridges this gap by acting as a lightweight, software-defined Shelly fleet:
 - Exposes **stateful variables** (switch outputs, input triggers, power metering, device statuses) backed by realistic Shelly hardware models.
 - Executes **native Shelly JavaScript scripts** inside a sandboxed QuickJS runtime to handle logic, timers, and event-driven automation.
-- Allows external clients and test harnesses limited to Shelly API interfaces to interact with other 3rd party systems using Yllehs devices as bridges/adapters.
+- Allows external clients and test harnesses limited to Shelly API interfaces to interact with virtual devices without physical hardware.
+- Native integration with **Home Assistant** out-of-the-box.
 
 ### Architecture
 
 ```mermaid
 graph LR
     subgraph ClientSystem["External Client / Automation System"]
-        Client["Shelly-Compatible Client<br/>(Home Assistant, Konnecta, SCADA, Test Harness)"]
+        Client["Home Assistant / Shelly Client<br/>(aioshelly, REST/RPC, WebSocket)"]
     end
 
     subgraph YllehsContainer["Yllehs (Bridge & Emulator)"]
-        RPC["Shelly RPC / REST API<br/>(:8080)"]
+        RPC["Shelly RPC / REST / WS Server<br/>(:8080)"]
+        mDNS["mDNS ZeroConf Advertiser<br/>(_shelly._tcp.local.)"]
         State["Virtual Device State<br/>(switch:0, input:0, pm:0)"]
         Engine["Sandboxed JS Runtime (QuickJS)<br/>(Shelly Scripts / Event Handlers)"]
         
@@ -34,18 +38,32 @@ graph LR
         Service["REST API / Webhook / Cloud Service<br/>(Alerting, Webhook, Database)"]
     end
 
-    Client -->|"Shelly RPC / REST calls<br/>(Switch.Set, Shelly.GetStatus)"| RPC
+    Client -->|"Shelly RPC / WebSocket<br/>(NotifyStatus, Switch.Set)"| RPC
+    mDNS -.->|"ZeroConf Discovery"| Client
     Engine -->|"Shelly.call('HTTP.POST', ...)<br/>or HTTP Webhook"| Service
 ```
 
 ---
 
+## Home Assistant Integration
+
+Yllehs devices integrate with the **official Home Assistant Shelly Integration** without any custom plugins:
+
+- **mDNS / ZeroConf Auto-Discovery**: Yllehs broadcasts `_shelly._tcp.local.` services. HA automatically discovers virtual devices on the local network.
+- **WebSocket Push Updates**: Real-time push updates via `NotifyStatus` and `NotifyEvent` frames over `ws://<ip>:<port>/rpc` — no polling latency.
+- **Full Control & State Reflection**: Switches and inputs exposed as native HA entities with instant bidirectional state synchronization.
+
+> **Tip for Docker**: To enable mDNS auto-discovery from Docker to your local network, run the container with `network_mode: host` or ensure mDNS multicast is forwarded. Alternatively, add devices directly in Home Assistant via **Settings -> Devices & Services -> Add Integration -> Shelly** and enter the host IP + Port.
+
+---
+
 ## Features
 
+- **Home Assistant Ready**: mDNS discovery, full RPC support (`Shelly.GetComponents`), and WebSocket push streams.
 - **Multi-Device Hosting**: Run multiple virtual Shelly devices with isolated state, ports, and JavaScript runtimes in a single process / container.
 - **Generation-Aware APIs**:
   - **Gen 1** (`shelly1`, `shelly1pm`, `shelly25`): Traditional REST API endpoints (`/relay/0?turn=on`, `/settings`, `/status`, `/shelly`).
-  - **Gen 2 / Gen 3** (`plus-1`, `plus-1pm`, `plus-2pm`, `plus-4pm`, `plus-i4`, `1-gen3`, `1pm-gen3`): Full Shelly RPC protocol (`/rpc`, `/rpc/<method>`, `/status`, `/shelly`).
+  - **Gen 2 / Gen 3** (`plus-1`, `plus-1pm`, `plus-2pm`, `plus-4pm`, `plus-i4`, `1-gen3`, `1pm-gen3`): Full Shelly RPC protocol (`/rpc`, `/rpc/<method>`, `/status`, `/shelly`, WebSockets).
 - **Real Shelly JavaScript Runtime (QuickJS)**:
   - Native sandboxing (no host OS leakage or arbitrary `eval()`).
   - Implements `Shelly.call()`, `Shelly.addEventHandler()`, `Shelly.addStatusHandler()`, `Shelly.getComponentStatus()`, `Shelly.getComponentConfig()`, `Shelly.getDeviceInfo()`.
@@ -61,13 +79,13 @@ graph LR
 | `shelly1` | Gen 1 | `relay:0`, `input:0` | REST |
 | `shelly1pm` | Gen 1 | `relay:0`, `input:0`, `pm:0` | REST |
 | `shelly25` | Gen 1 | `relay:0`, `relay:1`, `input:0`, `input:1`, `pm:0`, `pm:1` | REST |
-| `plus-1` | Gen 2 | `switch:0`, `input:0` | RPC + JS |
-| `plus-1pm` | Gen 2 | `switch:0`, `input:0` | RPC + JS |
-| `plus-2pm` | Gen 2 | `switch:0`, `switch:1`, `input:0`, `input:1` | RPC + JS |
-| `plus-4pm` | Gen 2 | `switch:0..3`, `input:0..3` | RPC + JS |
-| `plus-i4` | Gen 2 | `input:0..3` | RPC + JS |
-| `1-gen3` | Gen 3 | `switch:0`, `input:0` | RPC + JS |
-| `1pm-gen3` | Gen 3 | `switch:0`, `input:0` | RPC + JS |
+| `plus-1` | Gen 2 | `switch:0`, `input:0` | RPC + WS + JS |
+| `plus-1pm` | Gen 2 | `switch:0`, `input:0` | RPC + WS + JS |
+| `plus-2pm` | Gen 2 | `switch:0`, `switch:1`, `input:0`, `input:1` | RPC + WS + JS |
+| `plus-4pm` | Gen 2 | `switch:0..3`, `input:0..3` | RPC + WS + JS |
+| `plus-i4` | Gen 2 | `input:0..3` | RPC + WS + JS |
+| `1-gen3` | Gen 3 | `switch:0`, `input:0` | RPC + WS + JS |
+| `1pm-gen3` | Gen 3 | `switch:0`, `input:0` | RPC + WS + JS |
 
 ---
 
