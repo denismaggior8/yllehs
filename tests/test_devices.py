@@ -171,3 +171,15 @@ async def test_device_name_with_uppercase_and_spaces_in_js():
     
     assert dev.runtime.ctx.eval("devNameFromInfo") == "LIVING ROOM ALARM"
     assert dev.runtime.ctx.eval("devNameFromSys") == "LIVING ROOM ALARM"
+
+@pytest.mark.asyncio
+async def test_shelly_get_components_rpc():
+    dev = VirtualDevice(name="test-components", model="plus-1", port=8080)
+    res = await dev.rpc_handler.execute("Shelly.GetComponents")
+    assert "components" in res
+    assert res["total"] == len(dev.components)
+    keys = [c["key"] for c in res["components"]]
+    assert "switch:0" in keys
+    assert "input:0" in keys
+    assert "sys:0" in keys
+    assert "wifi:0" in keys

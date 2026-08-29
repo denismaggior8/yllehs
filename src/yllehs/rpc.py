@@ -16,13 +16,15 @@ class RPCHandler:
     async def execute(self, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
         params = params or {}
         
-        # Dispatch table
+        # System RPC
         if method == "Shelly.GetDeviceInfo":
             return self.device.get_device_info()
         elif method == "Shelly.GetStatus":
             return self.device.get_status()
         elif method == "Shelly.GetConfig":
             return self.device.get_config()
+        elif method == "Shelly.GetComponents":
+            return self.get_components(params)
         elif method == "Shelly.ListMethods":
             return self.list_methods()
         elif method == "Shelly.Reboot":
@@ -119,8 +121,22 @@ class RPCHandler:
 
         raise RPCError(404, f"Method '{method}' not found")
 
+    def get_components(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        components = []
+        for key, comp in self.device.components.items():
+            components.append({
+                "key": key,
+                "status": comp.get_status(),
+                "config": comp.get_config()
+            })
+        return {"components": components, "cfg_rev": 1, "offset": 0, "total": len(components)}
+
     def list_methods(self) -> Dict[str, Any]:
-        methods = ["Shelly.GetDeviceInfo", "Shelly.GetStatus", "Shelly.GetConfig", "Shelly.ListMethods", "Shelly.Reboot", "HTTP.GET", "HTTP.POST"]
+        methods = [
+            "Shelly.GetDeviceInfo", "Shelly.GetStatus", "Shelly.GetConfig",
+            "Shelly.GetComponents", "Shelly.ListMethods", "Shelly.Reboot",
+            "HTTP.GET", "HTTP.POST"
+        ]
         has_switch = any(c.type == "switch" for c in self.device.components.values())
         has_input = any(c.type == "input" for c in self.device.components.values())
         if has_switch:

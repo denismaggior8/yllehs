@@ -15,6 +15,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "quickjs>=1.19.4",
     "requests>=2.34.2",
+    "zeroconf>=0.151.1",
 ]
 
 [build-system]

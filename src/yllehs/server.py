@@ -1,6 +1,7 @@
 import json
-from aiohttp import web
-from typing import TYPE_CHECKING
+import asyncio
+from aiohttp import web, WSMsgType
+from typing import TYPE_CHECKING, Set
 from yllehs.rpc import RPCError
 
 if TYPE_CHECKING:
@@ -8,7 +9,43 @@ if TYPE_CHECKING:
 
 def create_device_app(device: "VirtualDevice") -> web.Application:
     app = web.Application()
-    
+    ws_clients: Set[web.WebSocketResponse] = set()
+
+    # Broadcast notification to connected Home Assistant / RPC WebSockets
+    def broadcast_notification(method: str, params: dict):
+        if not ws_clients:
+            return
+        msg = json.dumps({
+            "src": f"yllehs-{device.name}",
+            "dst": "all",
+            "method": method,
+            "params": params
+        })
+        for ws in list(ws_clients):
+            if not ws.closed:
+                asyncio.create_task(ws.send_str(msg))
+
+    def on_component_event(event_type: str, data: dict):
+        if event_type == "status_change":
+            # Real Shelly Gen2 NotifyStatus format
+            delta = data.get("delta", {})
+            params = {
+                "ts": data.get("status", {}).get("unixtime", 0),
+                data.get("component"): delta
+            }
+            broadcast_notification("NotifyStatus", params)
+        elif event_type == "event":
+            # Real Shelly Gen2 NotifyEvent format
+            params = {
+                "ts": data.get("ts", 0),
+                "events": [data.get("info", data)]
+            }
+            broadcast_notification("NotifyEvent", params)
+
+    # Listen to component updates for WebSocket push
+    for comp in device.components.values():
+        comp.add_listener(on_component_event)
+
     # --- Gen 2 & Gen 3 RPC endpoints ---
     async def handle_rpc_post(request: web.Request) -> web.Response:
         try:
@@ -31,7 +68,42 @@ def create_device_app(device: "VirtualDevice") -> web.Application:
         except Exception as e:
             return web.json_response({"id": rpc_id, "src": "yllehs", "error": {"code": 500, "message": str(e)}}, status=200)
 
-    async def handle_rpc_get(request: web.Request) -> web.Response:
+    async def handle_rpc_ws_or_get(request: web.Request) -> web.StreamResponse:
+        # Check if WebSocket upgrade request (Home Assistant aioshelly connection)
+        if request.headers.get("Upgrade", "").lower() == "websocket":
+            ws = web.WebSocketResponse()
+            await ws.prepare(request)
+            ws_clients.add(ws)
+            try:
+                async for msg in ws:
+                    if msg.type == WSMsgType.TEXT:
+                        try:
+                            req = json.loads(msg.data)
+                            rpc_id = req.get("id", 1)
+                            method = req.get("method")
+                            params = req.get("params", {})
+                            src = req.get("src", "client")
+                            
+                            if not method:
+                                await ws.send_str(json.dumps({"id": rpc_id, "src": f"yllehs-{device.name}", "dst": src, "error": {"code": 400, "message": "Missing method"}}))
+                                continue
+                            
+                            try:
+                                res = await device.rpc_handler.execute(method, params)
+                                await ws.send_str(json.dumps({"id": rpc_id, "src": f"yllehs-{device.name}", "dst": src, "result": res}))
+                            except RPCError as e:
+                                await ws.send_str(json.dumps({"id": rpc_id, "src": f"yllehs-{device.name}", "dst": src, "error": {"code": e.code, "message": e.message}}))
+                            except Exception as e:
+                                await ws.send_str(json.dumps({"id": rpc_id, "src": f"yllehs-{device.name}", "dst": src, "error": {"code": 500, "message": str(e)}}))
+                        except Exception as e:
+                            pass
+                    elif msg.type == WSMsgType.ERROR:
+                        break
+            finally:
+                ws_clients.discard(ws)
+            return ws
+
+        # HTTP GET RPC Method
         method = request.match_info.get("method")
         params = dict(request.query)
         parsed_params = {}
@@ -100,9 +172,10 @@ def create_device_app(device: "VirtualDevice") -> web.Application:
         app.router.add_get("/status", handle_status_get)
         app.router.add_get("/shelly", handle_shelly_get)
     else:
-        # Gen 2 & Gen 3 RPC Routes
+        # Gen 2 & Gen 3 RPC Routes (HTTP + WebSocket)
+        app.router.add_get("/rpc", handle_rpc_ws_or_get)
         app.router.add_post("/rpc", handle_rpc_post)
-        app.router.add_get("/rpc/{method}", handle_rpc_get)
+        app.router.add_get("/rpc/{method}", handle_rpc_ws_or_get)
         app.router.add_get("/shelly", handle_shelly_get)
         app.router.add_get("/status", handle_status_get)
 

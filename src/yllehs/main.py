@@ -6,6 +6,7 @@ from aiohttp import web
 from typing import List
 from yllehs.device import VirtualDevice
 from yllehs.server import create_device_app
+from yllehs.mdns import MDNSAdvertiser
 
 async def run_server(config_path: str):
     with open(config_path, "r") as f:
@@ -37,6 +38,10 @@ async def run_server(config_path: str):
         runners.append(runner)
         print(f"Started virtual Shelly device '{name}' (model: {model}) on http://0.0.0.0:{port}", flush=True)
 
+    # Start mDNS ZeroConf discovery for Home Assistant
+    mdns = MDNSAdvertiser()
+    mdns.start(devices)
+
     # Start scripts after event loop and HTTP servers are active
     for device in devices:
         device.start_script()
@@ -45,6 +50,7 @@ async def run_server(config_path: str):
         while True:
             await asyncio.sleep(3600)
     finally:
+        mdns.stop()
         for d in devices:
             d.stop()
         for r in runners:
