@@ -1,6 +1,6 @@
 # Yllehs
 
-Yllehs (pronounced “ILL-ess”, like “Illes”) is a software emulator for physical Shelly IoT devices designed to expose **stateful virtual device states** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
+Yllehs (pronounced “ILL-ess”, like “Illes”) is a software emulator for physical Shelly IoT devices designed to expose **the states of components in virtual devices** and execute **Shelly JavaScript logic** via official, unmodified Shelly APIs (RPC and REST).
 
 Fully discoverable and manageable as real Shelly devices by **Home Assistant**.
 
