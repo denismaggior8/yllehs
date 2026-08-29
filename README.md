@@ -214,3 +214,11 @@ uv run python -m yllehs.main yllehs.yaml
 # Run test suite
 uv run pytest
 ```
+
+---
+
+## Disclaimer
+
+This project is an independent open-source emulator and is **not** affiliated with, sponsored by, or endorsed by Shelly Group (Allterco / Shelly Europe Ltd.) or Home Assistant (Nabu Casa, Inc.). 
+
+"Shelly", "Home Assistant", and all other trademarks, product names, and registered marks mentioned herein are the property of their respective owners.
